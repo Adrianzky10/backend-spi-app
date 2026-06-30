@@ -1,0 +1,12 @@
+RewriteEngine On
+
+# Jangan rewrite jika file atau direktori memang ada
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+
+# Arahkan semua request ke index.php
+RewriteRule ^(.*)$ index.php [QSA,L]
+
+# Handle Authorization header untuk JWT (biasanya Apache menghapus ini secara default)
+RewriteCond %{HTTP:Authorization} ^(.*)
+RewriteRule .* - [e=HTTP_AUTHORIZATION:%1]

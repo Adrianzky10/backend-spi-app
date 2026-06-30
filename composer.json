@@ -1,0 +1,22 @@
+{
+  "name": "campus/spi-app",
+  "description": "Sistem Peminjaman Inventaris Kampus REST API",
+  "type": "project",
+  "autoload": {
+    "psr-4": {
+      "App\\": "src/"
+    }
+  },
+  "authors": [
+    {
+      "name": "Adrianzky10",
+      "email": "adriandwii14022@gmail.com"
+    }
+  ],
+  "require": {
+    "phpmailer/phpmailer": "^7.1",
+    "cloudinary/cloudinary_php": "^3.1",
+    "firebase/php-jwt": "^7.1",
+    "vlucas/phpdotenv": "^5.6"
+  }
+}
