@@ -114,6 +114,48 @@ elseif ($request_uri === '/api/items' && $request_method === 'GET') {
     } elseif ($request_method === 'DELETE') {
         $controller->destroy($id);
     }
+
+        // Borrowings (Peminjaman) Routes
+    elseif ($request_uri === '/api/borrowings/my' && $request_method === 'GET') {
+        $controller = new \App\Controllers\BorrowingController();
+        $controller->my();
+    } elseif ($request_uri === '/api/borrowings' && $request_method === 'GET') {
+        $controller = new \App\Controllers\BorrowingController();
+        $controller->index();
+    } elseif ($request_uri === '/api/borrowings' && $request_method === 'POST') {
+        $controller = new \App\Controllers\BorrowingController();
+        $controller->store();
+    } elseif (preg_match('/^/api/borrowings/(\d+)$/', $request_uri, $matches)) {
+        $id = $matches[1];
+        $controller = new \App\Controllers\BorrowingController();
+        if ($request_method === 'GET') {
+            $controller->show($id);
+        }
+    } elseif (preg_match('/^/api/borrowings/(\d+)/approve$/', $request_uri, $matches)) {
+        $id = $matches[1];
+        $controller = new \App\Controllers\BorrowingController();
+        if ($request_method === 'PATCH') {
+            $controller->approve($id);
+        }
+    } elseif (preg_match('/^/api/borrowings/(\d+)/reject$/', $request_uri, $matches)) {
+        $id = $matches[1];
+        $controller = new \App\Controllers\BorrowingController();
+        if ($request_method === 'PATCH') {
+            $controller->reject($id);
+        }
+    } elseif (preg_match('/^/api/borrowings/(\d+)/borrow$/', $request_uri, $matches)) {
+        $id = $matches[1];
+        $controller = new \App\Controllers\BorrowingController();
+        if ($request_method === 'PATCH') {
+            $controller->borrow($id);
+        }
+    } elseif (preg_match('/^/api/borrowings/(\d+)/return$/', $request_uri, $matches)) {
+        $id = $matches[1];
+        $controller = new \App\Controllers\BorrowingController();
+        if ($request_method === 'PATCH') {
+            $controller->returnItem($id);
+        }
+    }
 }
 
 
