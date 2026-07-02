@@ -1,0 +1,784 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Sistem Peminjaman Inventaris Kampus API",
+    "description": "Dokumentasi REST API Sistem Peminjaman Inventaris Kampus",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "http://localhost/SPI-APP/public",
+      "description": "Local server"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Auth",
+      "description": "Endpoints untuk Autentikasi Pengguna (Login, Register, Aktivasi, Profil, Logout)"
+    },
+    {
+      "name": "User",
+      "description": "Endpoints untuk Manajemen Pengguna / User CRUD (Admin Only)"
+    },
+    {
+      "name": "Category",
+      "description": "Endpoints untuk Manajemen Kategori Barang"
+    },
+    {
+      "name": "Item",
+      "description": "Endpoints untuk Manajemen Inventaris/Barang"
+    },
+    {
+      "name": "Borrowing",
+      "description": "Endpoints untuk Transaksi Peminjaman & Pengembalian"
+    },
+    {
+      "name": "Dashboard",
+      "description": "Endpoint untuk statistik dan ringkasan data (Admin & Petugas)"
+    }
+  ],
+  "paths": {
+    "/api/dashboard": {
+      "get": {
+        "tags": ["Dashboard"],
+        "summary": "Mengambil Data Statistik Dashboard (Admin & Petugas Only)",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Data dashboard berhasil dimuat.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": { "type": "string", "example": "success" },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "total_inventory": { "type": "integer", "example": 35 },
+                        "total_categories": { "type": "integer", "example": 8 },
+                        "total_students": { "type": "integer", "example": 41 },
+                        "total_borrowings": {
+                          "type": "integer",
+                          "example": 24
+                        },
+                        "pending": { "type": "integer", "example": 5 },
+                        "approved": { "type": "integer", "example": 3 },
+                        "borrowed": { "type": "integer", "example": 9 },
+                        "returned": { "type": "integer", "example": 7 },
+                        "out_of_stock": { "type": "integer", "example": 2 },
+                        "returned_today": { "type": "integer", "example": 4 },
+                        "latest_borrowings": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": { "type": "integer" },
+                              "user_name": { "type": "string" },
+                              "item_name": { "type": "string" },
+                              "borrow_date": {
+                                "type": "string",
+                                "format": "date"
+                              },
+                              "return_date": {
+                                "type": "string",
+                                "format": "date"
+                              },
+                              "status": { "type": "string" },
+                              "created_at": { "type": "string" }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": { "description": "Akses ditolak (Bukan Admin atau Petugas)." }
+        }
+      }
+    },
+    "/api/auth/register": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Registrasi Mahasiswa Baru",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "full_name": { "type": "string", "example": "Ahmad Dani" },
+                  "nim": { "type": "string", "example": "2100010023" },
+                  "email": {
+                    "type": "string",
+                    "example": "ahmaddani@student.unud.ac.id"
+                  },
+                  "password": { "type": "string", "example": "passwordrahasia" }
+                },
+                "required": ["full_name", "nim", "email", "password"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Registrasi berhasil, silakan aktivasi." },
+          "400": {
+            "description": "Input tidak valid / email atau NIM telah terdaftar."
+          }
+        }
+      }
+    },
+    "/api/auth/activation": {
+      "get": {
+        "tags": ["Auth"],
+        "summary": "Aktivasi Akun Mahasiswa",
+        "parameters": [
+          {
+            "name": "code",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "Token aktivasi yang dikirim melalui email"
+          }
+        ],
+        "responses": {
+          "200": { "description": "Akun berhasil diaktifkan." },
+          "400": { "description": "Token tidak valid / akun sudah aktif." }
+        }
+      }
+    },
+    "/api/auth/login": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Login Pengguna",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "example": "adlanzzz10@gmail.com"
+                  },
+                  "password": { "type": "string", "example": "Member123" }
+                },
+                "required": ["email", "password"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Login berhasil, token JWT dikembalikan.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": { "type": "string", "example": "success" },
+                    "message": {
+                      "type": "string",
+                      "example": "Login berhasil."
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "token": {
+                          "type": "string",
+                          "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "description": "Email atau password salah." },
+          "403": { "description": "Akun belum diaktifkan." }
+        }
+      }
+    },
+    "/api/auth/me": {
+      "get": {
+        "tags": ["Auth"],
+        "summary": "Mendapatkan profil pengguna yang aktif",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": { "description": "Data profil ditemukan." },
+          "401": { "description": "Token tidak valid / belum login." }
+        }
+      }
+    },
+    "/api/auth/logout": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Logout Pengguna",
+        "responses": {
+          "200": { "description": "Logout berhasil." }
+        }
+      }
+    },
+    "/api/users": {
+      "get": {
+        "tags": ["User"],
+        "summary": "Melihat Daftar Semua User (Admin Only)",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": { "description": "Daftar user berhasil dimuat." },
+          "403": { "description": "Akses ditolak (Bukan Admin)." }
+        }
+      },
+      "post": {
+        "tags": ["User"],
+        "summary": "Menambah User Baru (Admin Only)",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "full_name": { "type": "string", "example": "Petugas Baru" },
+                  "nim": {
+                    "type": "string",
+                    "nullable": true,
+                    "example": null
+                  },
+                  "email": {
+                    "type": "string",
+                    "example": "petugasbaru@spi.com"
+                  },
+                  "password": { "type": "string", "example": "password123" },
+                  "role_id": {
+                    "type": "integer",
+                    "example": 2,
+                    "description": "1: Admin, 2: Petugas, 3: Mahasiswa"
+                  },
+                  "is_verified": { "type": "integer", "example": 1 }
+                },
+                "required": ["full_name", "email", "password", "role_id"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "User berhasil dibuat." }
+        }
+      }
+    },
+    "/api/users/{id}": {
+      "get": {
+        "tags": ["User"],
+        "summary": "Melihat Detail User (Admin Only)",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer" }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Detail user ditemukan." },
+          "404": { "description": "User tidak ditemukan." }
+        }
+      },
+      "put": {
+        "tags": ["User"],
+        "summary": "Mengedit User (Admin Only)",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "full_name": {
+                    "type": "string",
+                    "example": "Petugas Update"
+                  },
+                  "nim": { "type": "string", "nullable": true },
+                  "email": {
+                    "type": "string",
+                    "example": "petugasupdate@spi.com"
+                  },
+                  "role_id": { "type": "integer", "example": 2 },
+                  "is_verified": { "type": "integer", "example": 1 }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "User berhasil diperbarui." }
+        }
+      },
+      "delete": {
+        "tags": ["User"],
+        "summary": "Menghapus User (Admin Only)",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer" }
+          }
+        ],
+        "responses": {
+          "200": { "description": "User berhasil dihapus." }
+        }
+      }
+    },
+    "/api/categories": {
+      "get": {
+        "tags": ["Category"],
+        "summary": "Melihat Daftar Semua Kategori",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": { "description": "Daftar kategori berhasil dimuat." }
+        }
+      },
+      "post": {
+        "tags": ["Category"],
+        "summary": "Membuat Kategori Baru (Admin Only)",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": { "type": "string", "example": "Elektronik" }
+                },
+                "required": ["name"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Kategori berhasil dibuat." }
+        }
+      }
+    },
+    "/api/categories/{id}": {
+      "get": {
+        "tags": ["Category"],
+        "summary": "Melihat Detail Kategori",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer" }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Detail kategori ditemukan." }
+        }
+      },
+      "put": {
+        "tags": ["Category"],
+        "summary": "Mengedit Kategori (Admin Only)",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": { "type": "string", "example": "Elektronik & Gadget" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Kategori berhasil diperbarui." }
+        }
+      },
+      "delete": {
+        "tags": ["Category"],
+        "summary": "Menghapus Kategori (Admin Only)",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer" }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Kategori berhasil dihapus." }
+        }
+      }
+    },
+    "/api/items": {
+      "get": {
+        "tags": ["Item"],
+        "summary": "Melihat Daftar Semua Barang Inventaris",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": { "description": "Daftar barang berhasil dimuat." }
+        }
+      },
+      "post": {
+        "tags": ["Item"],
+        "summary": "Menambah Barang Baru (Admin Only)",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "category_id": { "type": "integer", "example": 1 },
+                  "name": { "type": "string", "example": "Proyektor Epson" },
+                  "description": {
+                    "type": "string",
+                    "example": "Untuk presentasi kelas"
+                  },
+                  "stock": { "type": "integer", "example": 5 },
+                  "image_url": {
+                    "type": "string",
+                    "example": "http://image-link.com"
+                  }
+                },
+                "required": ["category_id", "name", "stock"]
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "category_id": { "type": "integer", "example": 1 },
+                  "name": { "type": "string", "example": "Proyektor Epson" },
+                  "description": {
+                    "type": "string",
+                    "example": "Untuk presentasi kelas"
+                  },
+                  "stock": { "type": "integer", "example": 5 },
+                  "image": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "File gambar barang (JPG/PNG)"
+                  }
+                },
+                "required": ["category_id", "name", "stock"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Barang berhasil ditambahkan." }
+        }
+      }
+    },
+    "/api/items/{id}": {
+      "get": {
+        "tags": ["Item"],
+        "summary": "Melihat Detail Barang",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer" }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Detail barang ditemukan." }
+        }
+      },
+      "put": {
+        "tags": ["Item"],
+        "summary": "Mengedit Barang (Admin Only)",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "category_id": { "type": "integer", "example": 1 },
+                  "name": { "type": "string", "example": "Proyektor Epson EB" },
+                  "description": {
+                    "type": "string",
+                    "example": "Untuk presentasi kelas utama"
+                  },
+                  "stock": { "type": "integer", "example": 4 },
+                  "image_url": { "type": "string" }
+                }
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "category_id": { "type": "integer", "example": 1 },
+                  "name": { "type": "string", "example": "Proyektor Epson EB" },
+                  "description": {
+                    "type": "string",
+                    "example": "Untuk presentasi kelas utama"
+                  },
+                  "stock": { "type": "integer", "example": 4 },
+                  "image": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "File gambar barang baru (JPG/PNG)"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Barang berhasil diperbarui." }
+        }
+      },
+      "delete": {
+        "tags": ["Item"],
+        "summary": "Menghapus Barang (Admin Only)",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer" }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Barang berhasil dihapus." }
+        }
+      }
+    },
+    "/api/borrowings": {
+      "get": {
+        "tags": ["Borrowing"],
+        "summary": "Melihat Riwayat Peminjaman (Admin/Petugas melihat semua, Mahasiswa melihat miliknya)",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": { "description": "Riwayat peminjaman berhasil dimuat." }
+        }
+      },
+      "post": {
+        "tags": ["Borrowing"],
+        "summary": "Mengajukan Peminjaman Barang (Mahasiswa Only)",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "item_id": { "type": "integer", "example": 1 },
+                  "borrow_date": {
+                    "type": "string",
+                    "format": "date",
+                    "example": "2026-06-25"
+                  },
+                  "return_date": {
+                    "type": "string",
+                    "format": "date",
+                    "example": "2026-06-28"
+                  },
+                  "document": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "Bukti berkas pengajuan dalam format PDF"
+                  }
+                },
+                "required": [
+                  "item_id",
+                  "borrow_date",
+                  "return_date",
+                  "document"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Pengajuan peminjaman berhasil dibuat." }
+        }
+      }
+    },
+    "/api/borrowings/my": {
+      "get": {
+        "tags": ["Borrowing"],
+        "summary": "Melihat Riwayat Peminjaman Milik Sendiri (User Login)",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": { "description": "Riwayat peminjaman saya berhasil dimuat." }
+        }
+      }
+    },
+    "/api/borrowings/{id}": {
+      "get": {
+        "tags": ["Borrowing"],
+        "summary": "Melihat Detail Peminjaman",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer" }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Detail peminjaman berhasil dimuat." },
+          "403": { "description": "Anda tidak memiliki akses ke data ini." },
+          "404": { "description": "Data peminjaman tidak ditemukan." }
+        }
+      }
+    },
+    "/api/borrowings/{id}/approve": {
+      "patch": {
+        "tags": ["Borrowing"],
+        "summary": "Menyetujui Peminjaman Barang (Petugas/Admin Only)",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Peminjaman berhasil disetujui, stok berkurang."
+          }
+        }
+      }
+    },
+    "/api/borrowings/{id}/reject": {
+      "patch": {
+        "tags": ["Borrowing"],
+        "summary": "Menolak Peminjaman Barang (Petugas/Admin Only)",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "rejection_reason": {
+                    "type": "string",
+                    "example": "Berkas PDF tidak jelas / tidak sah."
+                  }
+                },
+                "required": ["rejection_reason"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Peminjaman berhasil ditolak." }
+        }
+      }
+    },
+    "/api/borrowings/{id}/borrow": {
+      "patch": {
+        "tags": ["Borrowing"],
+        "summary": "Menandai Barang Sedang Dipinjam (Petugas/Admin Only)",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer" }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Status berhasil diubah menjadi Dipinjam." },
+          "400": { "description": "Status saat ini bukan Approved." }
+        }
+      }
+    },
+    "/api/borrowings/{id}/return": {
+      "patch": {
+        "tags": ["Borrowing"],
+        "summary": "Mengembalikan Barang (Petugas/Admin Only)",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Barang berhasil dikembalikan, stok bertambah."
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "Masukkan token JWT login Anda. Contoh: 'Bearer <token>'"
+      }
+    }
+  }
+}
