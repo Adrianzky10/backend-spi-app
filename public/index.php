@@ -156,6 +156,13 @@ elseif ($request_uri === '/api/items' && $request_method === 'GET') {
             $controller->returnItem($id);
         }
     }
+    
+    // Dashboard Route (Admin & Petugas Only)
+    elseif ($request_uri === '/api/dashboard' && $request_method === 'GET') {
+        $controller = new \App\Controllers\DashboardController();
+        $controller->index();
+    }
+
 }
 
 
