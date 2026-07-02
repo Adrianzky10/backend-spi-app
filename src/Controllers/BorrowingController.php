@@ -149,4 +149,132 @@ class BorrowingController {
             Response::error("Pengajuan peminjaman gagal. Detail: " . $e->getMessage(), 500);
         }
     }
+    
+        // PATCH /api/borrowings/{id}/approve (Petugas/Admin Only)
+    public function approve($id) {
+        $currentUser = AuthMiddleware::authenticate();
+        AuthMiddleware::authorize($currentUser, [1, 2]); // Admin & Petugas
+
+        $this->borrowing->id = $id;
+        if (!$this->borrowing->readOne()) {
+            Response::error("Data peminjaman tidak ditemukan.", 404);
+        }
+
+        if ($this->borrowing->status !== 'Pending') {
+            Response::error("Hanya pengajuan berstatus 'Pending' yang bisa disetujui. Status saat ini: " . $this->borrowing->status, 400);
+        }
+
+        // Cek stok barang saat ini
+        $item = new Item($this->db);
+        $item->id = $this->borrowing->item_id;
+        $item->readOne();
+
+        if ($item->stock <= 0) {
+            Response::error("Persetujuan gagal. Stok barang kosong.", 400);
+        }
+
+        $this->db->beginTransaction();
+
+        try {
+            // Kurangi stok barang
+            $newStock = $item->stock - 1;
+            $item->updateStock($newStock);
+
+            // Update status peminjaman ke Approved
+            $this->borrowing->updateStatus('Approved');
+
+            $this->db->commit();
+            Response::success("Pengajuan peminjaman berhasil disetujui.");
+        } catch (Exception $e) {
+            $this->db->rollBack();
+            Response::error("Gagal menyetujui peminjaman. Detail: " . $e->getMessage(), 500);
+        }
+    }
+
+    // PATCH /api/borrowings/{id}/reject (Petugas/Admin Only)
+    public function reject($id) {
+        $currentUser = AuthMiddleware::authenticate();
+        AuthMiddleware::authorize($currentUser, [1, 2]);
+
+        $this->borrowing->id = $id;
+        if (!$this->borrowing->readOne()) {
+            Response::error("Data peminjaman tidak ditemukan.", 404);
+        }
+
+        if ($this->borrowing->status !== 'Pending') {
+            Response::error("Hanya pengajuan berstatus 'Pending' yang bisa ditolak.", 400);
+        }
+
+        $data = json_decode(file_get_contents("php://input"));
+        $reason = $data->rejection_reason ?? null;
+
+        if (empty($reason)) {
+            Response::error("Alasan penolakan (rejection_reason) wajib diisi.", 400);
+        }
+
+        if ($this->borrowing->updateStatus('Rejected', $reason)) {
+            Response::success("Pengajuan peminjaman telah ditolak.");
+        } else {
+            Response::error("Gagal menolak pengajuan peminjaman.", 500);
+        }
+    }
+
+    // PATCH /api/borrowings/{id}/borrow (Petugas/Admin Only)
+    public function borrow($id) {
+        $currentUser = AuthMiddleware::authenticate();
+        AuthMiddleware::authorize($currentUser, [1, 2]);
+
+        $this->borrowing->id = $id;
+        if (!$this->borrowing->readOne()) {
+            Response::error("Data peminjaman tidak ditemukan.", 404);
+        }
+
+        if ($this->borrowing->status !== 'Approved') {
+            Response::error("Hanya peminjaman berstatus 'Approved' yang bisa ditandai sedang dipinjam.", 400);
+        }
+
+        if ($this->borrowing->updateStatus('Borrowed')) {
+            Response::success("Peminjaman berhasil ditandai sebagai 'Dipinjam'.");
+        } else {
+            Response::error("Gagal mengubah status peminjaman.", 500);
+        }
+    }
+
+    // PATCH /api/borrowings/{id}/return (Petugas/Admin Only)
+    public function returnItem($id) {
+        $currentUser = AuthMiddleware::authenticate();
+        AuthMiddleware::authorize($currentUser, [1, 2]);
+
+        $this->borrowing->id = $id;
+        if (!$this->borrowing->readOne()) {
+            Response::error("Data peminjaman tidak ditemukan.", 404);
+        }
+
+        // Hanya barang yang berstatus 'Borrowed' atau 'Approved' yang bisa dikembalikan
+        if ($this->borrowing->status !== 'Borrowed' && $this->borrowing->status !== 'Approved') {
+            Response::error("Peminjaman tidak dalam status yang valid untuk dikembalikan. Status saat ini: " . $this->borrowing->status, 400);
+        }
+
+        // Ambil info barang
+        $item = new Item($this->db);
+        $item->id = $this->borrowing->item_id;
+        $item->readOne();
+
+        $this->db->beginTransaction();
+
+        try {
+            // Tambah stok barang kembali
+            $newStock = $item->stock + 1;
+            $item->updateStock($newStock);
+
+            // Update status peminjaman ke Returned
+            $this->borrowing->updateStatus('Returned');
+
+            $this->db->commit();
+            Response::success("Barang inventaris telah berhasil dikembalikan.");
+        } catch (Exception $e) {
+            $this->db->rollBack();
+            Response::error("Gagal memproses pengembalian barang. Detail: " . $e->getMessage(), 500);
+        }
+    }
 }
