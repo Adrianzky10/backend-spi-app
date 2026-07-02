@@ -78,6 +78,45 @@ elseif ($request_uri === '/api/users' && $request_method === 'GET') {
     }
 }
 
+// Category Management Routes
+elseif ($request_uri === '/api/categories' && $request_method === 'GET') {
+    $controller = new \App\Controllers\CategoryController();
+    $controller->index();
+} elseif ($request_uri === '/api/categories' && $request_method === 'POST') {
+    $controller = new \App\Controllers\CategoryController();
+    $controller->store();
+} elseif (preg_match('/^\/api\/categories\/(\d+)$/', $request_uri, $matches)) {
+    $id = $matches[1];
+    $controller = new \App\Controllers\CategoryController();
+    if ($request_method === 'GET') {
+        $controller->show($id);
+    } elseif ($request_method === 'PUT') {
+        $controller->update($id);
+    } elseif ($request_method === 'DELETE') {
+        $controller->destroy($id);
+    }
+}
+
+// Item (Inventaris) Management Routes
+elseif ($request_uri === '/api/items' && $request_method === 'GET') {
+    $controller = new \App\Controllers\ItemController();
+    $controller->index();
+} elseif ($request_uri === '/api/items' && $request_method === 'POST') {
+    $controller = new \App\Controllers\ItemController();
+    $controller->store();
+} elseif (preg_match('/^\/api\/items\/(\d+)$/', $request_uri, $matches)) {
+    $id = $matches[1];
+    $controller = new \App\Controllers\ItemController();
+    if ($request_method === 'GET') {
+        $controller->show($id);
+    } elseif ($request_method === 'PUT' || $request_method === 'POST') {
+        $controller->update($id);
+    } elseif ($request_method === 'DELETE') {
+        $controller->destroy($id);
+    }
+}
+
+
 
 // Jika endpoint tidak ditemukan
 \App\Utils\Response::error("Endpoint not found: " . $request_uri, 404);
