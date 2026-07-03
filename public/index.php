@@ -31,7 +31,7 @@ $request_method = $_SERVER['REQUEST_METHOD'];
 
 // Normalisasi URI dengan menghilangkan nama folder project jika berjalan di XAMPP/localhost
 // Sesuaikan base path dengan nama folder project Anda (misal: /SPI-APP/public)
-$base_path = '/SPI-APP/public'; 
+$base_path = '/backend-spi-app/public'; 
 if (strpos($request_uri, $base_path) === 0) {
     $request_uri = substr($request_uri, strlen($base_path));
 }
