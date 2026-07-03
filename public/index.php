@@ -1,7 +1,7 @@
 <?php
 
 // CORS Headers
-header("Access-Control-Allow-Origin: *");
+header("Access-Control-Allow-Origin: *"); // Ganti * dengan URL frontend di production
 header("Content-Type: application/json; charset=UTF-8");
 header("Access-Control-Allow-Methods: GET, POST, PUT, PATCH, DELETE, OPTIONS");
 header("Access-Control-Max-Age: 3600");
@@ -30,8 +30,8 @@ $request_uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 $request_method = $_SERVER['REQUEST_METHOD'];
 
 // Normalisasi URI dengan menghilangkan nama folder project jika berjalan di XAMPP/localhost
-// Base Pathnya (misal: /SPI-APP/public)
-$base_path = '/backend-spi-app/public'; 
+// Sesuaikan base path dengan nama folder project Anda (misal: /SPI-APP/public)
+$base_path = '/SPI-APP/public'; 
 if (strpos($request_uri, $base_path) === 0) {
     $request_uri = substr($request_uri, strlen($base_path));
 }
@@ -114,58 +114,55 @@ elseif ($request_uri === '/api/items' && $request_method === 'GET') {
     } elseif ($request_method === 'DELETE') {
         $controller->destroy($id);
     }
-
-        // Borrowings (Peminjaman) Routes
-    elseif ($request_uri === '/api/borrowings/my' && $request_method === 'GET') {
-        $controller = new \App\Controllers\BorrowingController();
-        $controller->my();
-    } elseif ($request_uri === '/api/borrowings' && $request_method === 'GET') {
-        $controller = new \App\Controllers\BorrowingController();
-        $controller->index();
-    } elseif ($request_uri === '/api/borrowings' && $request_method === 'POST') {
-        $controller = new \App\Controllers\BorrowingController();
-        $controller->store();
-    } elseif (preg_match('/^/api/borrowings/(\d+)$/', $request_uri, $matches)) {
-        $id = $matches[1];
-        $controller = new \App\Controllers\BorrowingController();
-        if ($request_method === 'GET') {
-            $controller->show($id);
-        }
-    } elseif (preg_match('/^/api/borrowings/(\d+)/approve$/', $request_uri, $matches)) {
-        $id = $matches[1];
-        $controller = new \App\Controllers\BorrowingController();
-        if ($request_method === 'PATCH') {
-            $controller->approve($id);
-        }
-    } elseif (preg_match('/^/api/borrowings/(\d+)/reject$/', $request_uri, $matches)) {
-        $id = $matches[1];
-        $controller = new \App\Controllers\BorrowingController();
-        if ($request_method === 'PATCH') {
-            $controller->reject($id);
-        }
-    } elseif (preg_match('/^/api/borrowings/(\d+)/borrow$/', $request_uri, $matches)) {
-        $id = $matches[1];
-        $controller = new \App\Controllers\BorrowingController();
-        if ($request_method === 'PATCH') {
-            $controller->borrow($id);
-        }
-    } elseif (preg_match('/^/api/borrowings/(\d+)/return$/', $request_uri, $matches)) {
-        $id = $matches[1];
-        $controller = new \App\Controllers\BorrowingController();
-        if ($request_method === 'PATCH') {
-            $controller->returnItem($id);
-        }
-    }
-    
-    // Dashboard Route (Admin & Petugas Only)
-    elseif ($request_uri === '/api/dashboard' && $request_method === 'GET') {
-        $controller = new \App\Controllers\DashboardController();
-        $controller->index();
-    }
-
 }
 
+// Dashboard Route (Admin & Petugas Only)
+elseif ($request_uri === '/api/dashboard' && $request_method === 'GET') {
+    $controller = new \App\Controllers\DashboardController();
+    $controller->index();
+}
 
+// Borrowings (Peminjaman) Routes
+elseif ($request_uri === '/api/borrowings/my' && $request_method === 'GET') {
+    $controller = new \App\Controllers\BorrowingController();
+    $controller->my();
+} elseif ($request_uri === '/api/borrowings' && $request_method === 'GET') {
+    $controller = new \App\Controllers\BorrowingController();
+    $controller->index();
+} elseif ($request_uri === '/api/borrowings' && $request_method === 'POST') {
+    $controller = new \App\Controllers\BorrowingController();
+    $controller->store();
+} elseif (preg_match('/^\/api\/borrowings\/(\d+)$/', $request_uri, $matches)) {
+    $id = $matches[1];
+    $controller = new \App\Controllers\BorrowingController();
+    if ($request_method === 'GET') {
+        $controller->show($id);
+    }
+} elseif (preg_match('/^\/api\/borrowings\/(\d+)\/approve$/', $request_uri, $matches)) {
+    $id = $matches[1];
+    $controller = new \App\Controllers\BorrowingController();
+    if ($request_method === 'PATCH') {
+        $controller->approve($id);
+    }
+} elseif (preg_match('/^\/api\/borrowings\/(\d+)\/reject$/', $request_uri, $matches)) {
+    $id = $matches[1];
+    $controller = new \App\Controllers\BorrowingController();
+    if ($request_method === 'PATCH') {
+        $controller->reject($id);
+    }
+} elseif (preg_match('/^\/api\/borrowings\/(\d+)\/borrow$/', $request_uri, $matches)) {
+    $id = $matches[1];
+    $controller = new \App\Controllers\BorrowingController();
+    if ($request_method === 'PATCH') {
+        $controller->borrow($id);
+    }
+} elseif (preg_match('/^\/api\/borrowings\/(\d+)\/return$/', $request_uri, $matches)) {
+    $id = $matches[1];
+    $controller = new \App\Controllers\BorrowingController();
+    if ($request_method === 'PATCH') {
+        $controller->returnItem($id);
+    }
+}
 
 // Jika endpoint tidak ditemukan
 \App\Utils\Response::error("Endpoint not found: " . $request_uri, 404);
