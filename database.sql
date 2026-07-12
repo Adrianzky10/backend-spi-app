@@ -69,3 +69,8 @@ CREATE TABLE IF NOT EXISTS documents (
 -- Insert Initial Roles
 INSERT INTO roles (name) VALUES ('Admin'), ('Petugas'), ('Mahasiswa')
 ON DUPLICATE KEY UPDATE name=name;
+
+-- Migration: Tambah kolom reset password pada tabel users
+ALTER TABLE users
+ADD COLUMN reset_password_token VARCHAR(255) NULL,
+ADD COLUMN reset_password_expired_at DATETIME NULL;
