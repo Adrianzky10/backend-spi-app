@@ -150,4 +150,160 @@ class AuthController {
         // Untuk REST API, kita cukup mengirim pesan sukses.
         Response::success("Logout berhasil.");
     }
+
+    public function updateProfile() {
+        // Verifikasi JWT
+        $currentUser = \App\Middleware\AuthMiddleware::authenticate();
+
+        $data = json_decode(file_get_contents("php://input"));
+
+        // Validasi
+        if(empty($data->full_name) || empty($data->email)) {
+            Response::error("Nama lengkap dan email wajib diisi.", 400);
+        }
+
+        if(!filter_var($data->email, FILTER_VALIDATE_EMAIL)) {
+            Response::error("Format email tidak valid.", 400);
+        }
+
+        // Cek email tidak digunakan user lain
+        $this->user->email = $data->email;
+        if($this->user->emailExistsExcept($currentUser['id'])) {
+            Response::error("Email sudah digunakan oleh pengguna lain.", 400);
+        }
+
+        // Set properties
+        $this->user->id = $currentUser['id'];
+        $this->user->full_name = $data->full_name;
+        $this->user->email = $data->email;
+
+        if($this->user->updateProfile()) {
+            Response::success("Profil berhasil diperbarui.");
+        } else {
+            Response::error("Gagal memperbarui profil. Terjadi kesalahan pada server.", 500);
+        }
+    }
+
+    public function changePassword() {
+        // Verifikasi JWT
+        $currentUser = \App\Middleware\AuthMiddleware::authenticate();
+
+        $data = json_decode(file_get_contents("php://input"));
+
+        // Validasi
+        if(empty($data->current_password) || empty($data->new_password) || empty($data->confirm_password)) {
+            Response::error("Semua field password wajib diisi.", 400);
+        }
+
+        if(strlen($data->new_password) < 8) {
+            Response::error("Password baru minimal 8 karakter.", 400);
+        }
+
+        if($data->new_password !== $data->confirm_password) {
+            Response::error("Konfirmasi password tidak cocok dengan password baru.", 400);
+        }
+
+        // Ambil data user dengan password dari database
+        $this->user->id = $currentUser['id'];
+        if(!$this->user->readOneWithPassword()) {
+            Response::error("Pengguna tidak ditemukan.", 404);
+        }
+
+        // Verifikasi password lama
+        if(!password_verify($data->current_password, $this->user->password)) {
+            Response::error("Password saat ini tidak sesuai.", 400);
+        }
+
+        // Hash password baru dan update
+        $this->user->password = password_hash($data->new_password, PASSWORD_BCRYPT);
+
+        if($this->user->updatePassword()) {
+            Response::success("Password berhasil diubah.");
+        } else {
+            Response::error("Gagal mengubah password. Terjadi kesalahan pada server.", 500);
+        }
+    }
+
+    public function forgotPassword() {
+        $data = json_decode(file_get_contents("php://input"));
+
+        // Validasi
+        if(empty($data->email)) {
+            Response::error("Email wajib diisi.", 400);
+        }
+
+        if(!filter_var($data->email, FILTER_VALIDATE_EMAIL)) {
+            Response::error("Format email tidak valid.", 400);
+        }
+
+        // Cek email terdaftar
+        $this->user->email = $data->email;
+        if(!$this->user->emailExists()) {
+            Response::error("Email tidak terdaftar dalam sistem.", 404);
+        }
+
+        // Generate token reset
+        $resetToken = bin2hex(random_bytes(32));
+        $expiredAt = date('Y-m-d H:i:s', time() + 3600); // 1 jam dari sekarang
+
+        // Simpan token ke database
+        $this->user->reset_password_token = $resetToken;
+        $this->user->reset_password_expired_at = $expiredAt;
+
+        if($this->user->setResetToken()) {
+            // Kirim email reset password
+            $mailSent = Mailer::sendResetPasswordEmail(
+                $this->user->email, 
+                $this->user->full_name, 
+                $resetToken
+            );
+
+            if($mailSent === true) {
+                Response::success("Link reset password telah dikirim ke email Anda.");
+            } else {
+                Response::success("Link reset password telah dikirim, tetapi terjadi masalah pengiriman email. Detail Error: " . $mailSent);
+            }
+        } else {
+            Response::error("Gagal memproses permintaan reset password. Terjadi kesalahan pada server.", 500);
+        }
+    }
+
+    public function resetPassword() {
+        $data = json_decode(file_get_contents("php://input"));
+
+        // Validasi
+        if(empty($data->token) || empty($data->password) || empty($data->confirm_password)) {
+            Response::error("Token, password, dan konfirmasi password wajib diisi.", 400);
+        }
+
+        if(strlen($data->password) < 8) {
+            Response::error("Password minimal 8 karakter.", 400);
+        }
+
+        if($data->password !== $data->confirm_password) {
+            Response::error("Konfirmasi password tidak cocok.", 400);
+        }
+
+        // Cari user berdasarkan token
+        $this->user->reset_password_token = $data->token;
+        if(!$this->user->findByResetToken()) {
+            Response::error("Token reset password tidak valid.", 400);
+        }
+
+        // Cek apakah token sudah expired
+        if(strtotime($this->user->reset_password_expired_at) < time()) {
+            Response::error("Token reset password sudah kedaluwarsa. Silakan ajukan permintaan baru.", 400);
+        }
+
+        // Hash password baru dan update
+        $this->user->password = password_hash($data->password, PASSWORD_BCRYPT);
+
+        if($this->user->updatePassword()) {
+            // Hapus token reset setelah berhasil
+            $this->user->clearResetToken();
+            Response::success("Password berhasil diperbarui.");
+        } else {
+            Response::error("Gagal memperbarui password. Terjadi kesalahan pada server.", 500);
+        }
+    }
 }

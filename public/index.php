@@ -51,9 +51,21 @@ if ($request_uri === '/api/auth/register' && $request_method === 'POST') {
 } elseif ($request_uri === '/api/auth/login' && $request_method === 'POST') {
     $controller = new \App\Controllers\AuthController();
     $controller->login();
+} elseif ($request_uri === '/api/auth/forgot-password' && $request_method === 'POST') {
+    $controller = new \App\Controllers\AuthController();
+    $controller->forgotPassword();
+} elseif ($request_uri === '/api/auth/reset-password' && $request_method === 'POST') {
+    $controller = new \App\Controllers\AuthController();
+    $controller->resetPassword();
+} elseif ($request_uri === '/api/auth/change-password' && $request_method === 'PATCH') {
+    $controller = new \App\Controllers\AuthController();
+    $controller->changePassword();
 } elseif ($request_uri === '/api/auth/me' && $request_method === 'GET') {
     $controller = new \App\Controllers\AuthController();
     $controller->me();
+} elseif ($request_uri === '/api/auth/me' && $request_method === 'PUT') {
+    $controller = new \App\Controllers\AuthController();
+    $controller->updateProfile();
 } elseif ($request_uri === '/api/auth/logout' && $request_method === 'POST') {
     $controller = new \App\Controllers\AuthController();
     $controller->logout();
